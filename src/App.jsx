@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import socket from "./socket";
 import Login from "./components/pages/Login";
@@ -17,6 +17,7 @@ import {
 } from "./slices/chatSlice";
 
 import UserList from "./components/pages/usersList";
+import Signup from "./components/pages/Signup";
 
 function App() {
   const dispatch = useDispatch();
@@ -27,7 +28,7 @@ function App() {
     (state) => state.chat
   );
 
-  console.log({ userId });
+  const [isSignup, setIsSignup] = useState(false);
 
   useEffect(() => {
     if (!selectedChat) return;
@@ -187,11 +188,20 @@ function App() {
 
         {!joined ? (
           <div className="flex-1 flex items-center justify-center">
-            <Login
-              joinChat={joinChat}
-              formData={formData}
-              setFormData={(data) => dispatch(setFormData(data))}
-            />
+            {isSignup ? (
+              <Signup switchToLogin={() => setIsSignup(false)} />
+            ) : (
+              <div className="flex flex-col gap-4">
+                <Login joinChat={joinChat} />
+
+                <p
+                  className="text-sm text-blue-600 text-center cursor-pointer"
+                  onClick={() => setIsSignup(true)}
+                >
+                  Don’t have an account? Sign up
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-1 overflow-hidden">
