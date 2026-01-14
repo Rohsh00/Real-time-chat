@@ -1,209 +1,216 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import socket from "./socket";
 import Login from "./components/pages/Login";
 import Landing from "./components/pages/Landing";
 import axiosApi from "./config/axios";
 import toast, { Toaster } from "react-hot-toast";
 
+import { setFormData, setUser } from "./slices/authSlice";
+
+import {
+  addMessage,
+  setMessages,
+  setMessage,
+  setTypingUserID,
+  setUploading,
+} from "./slices/chatSlice";
+
+import UserList from "./components/pages/usersList";
+
 function App() {
+  const dispatch = useDispatch();
   const typingTimeoutRef = useRef(null);
 
-  const [username, setUsername] = useState("");
-  const [formData, setFormData] = useState({ username: "", password: "" });
-  const [userId, setUserId] = useState("");
-  const [joined, setJoined] = useState(false);
+  const { userId, joined, formData } = useSelector((state) => state.auth);
+  const { selectedUser, selectedChat, message } = useSelector(
+    (state) => state.chat
+  );
 
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [typingUserID, setTypingUserID] = useState("");
-
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  console.log({ userId });
 
   useEffect(() => {
-    socket.on("receivePrivateMessage", (data) => {
-      setMessages((prev) => [...prev, data]);
-    });
+    if (!selectedChat) return;
 
-    return () => socket.off("receivePrivateMessage");
-  }, []);
-
-  useEffect(() => {
-    const handleTyping = ({ senderId, isTyping }) => {
-      if (senderId === selectedUserId) {
-        setTypingUserID(isTyping ? senderId : "");
+    const loadChat = async () => {
+      try {
+        const res = await axiosApi.get(`/messages/history/${selectedChat._id}`);
+        dispatch(setMessages(res.data));
+      } catch (err) {
+        console.error("Load chat failed", err);
       }
     };
 
-    socket.on("receiveTypingState", handleTyping);
-    socket.on("stopTypingState", handleTyping);
+    loadChat();
 
-    return () => {
-      socket.off("receiveTypingState", handleTyping);
-      socket.off("stopTypingState", handleTyping);
-    };
-  }, [selectedUserId]);
+    socket.emit("joinRoom", {
+      chatId: selectedChat._id,
+    });
+  }, [selectedChat, dispatch]);
 
   useEffect(() => {
-    if (!joined) return;
+    socket.on("receiveMessage", (data) => {
+      dispatch(addMessage(data));
+    });
 
-    const loadHistory = async () => {
-      const res = await axiosApi.get("/messages/getAllChatHistory");
-      setMessages(res.data);
+    return () => socket.off("receiveMessage");
+  }, [dispatch]);
+
+  useEffect(() => {
+    socket.on(
+      "receiveTypingState",
+      ({ senderId, chatId, isTyping, username }) => {
+        if (selectedChat && chatId === selectedChat._id) {
+          dispatch(setTypingUserID(isTyping ? username : ""));
+        }
+      }
+    );
+
+    return () => {
+      socket.off("receiveTypingState");
     };
-
-    loadHistory();
-  }, [joined]);
+  }, [dispatch, selectedChat]);
 
   const joinChat = async () => {
-    if (!formData.username?.trim()) {
-      toast.error("Username is required");
-      return;
-    }
-
-    if (!formData.password?.trim()) {
-      toast.error("Password is required");
+    if (!formData.username || !formData.password) {
+      toast.error("Username and password required");
       return;
     }
 
     const loadingToast = toast.loading("Logging in...");
 
     try {
-      const res = await axiosApi.post("/userLogin", {
-        username: formData.username,
-        password: formData.password,
-      });
+      const res = await axiosApi.post("/auth/userLogin", formData);
 
       const { token, user } = res.data;
 
-      localStorage.setItem("token", token);
-
-      setUserId(user.username);
-      setUsername(user.username);
-
-      socket.emit("setUser", {
+      const userDetails = {
         userId: user.userId,
         username: user.username,
+      };
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user_details", JSON.stringify(userDetails));
+
+      dispatch(setUser(userDetails));
+
+      socket.auth = { token };
+      socket.connect();
+
+      socket.once("connect", () => {
+        socket.emit("setUser", userDetails);
       });
 
-      const receiverId = user.username === "rohit" ? "pawan" : "rohit";
-
-      setSelectedUserId(receiverId);
-
-      socket.emit("joinRoom", {
-        senderId: username,
-        receiverId,
-      });
-
-      setJoined(true);
-
-      toast.success("Login successful!", { id: loadingToast });
+      toast.success("Login successful", { id: loadingToast });
     } catch (err) {
-      const msg =
-        err?.response?.data?.message || "Invalid username or password";
-
-      toast.error(msg, { id: loadingToast });
-      setJoined(false);
+      toast.error("Login failed", { id: loadingToast });
     }
   };
 
   const sendMessage = () => {
-    if (!message.trim()) return;
+    if (!message.trim() || !selectedChat) return;
 
-    socket.emit("sendPrivateMessage", {
+    const receiverId =
+      selectedChat.user1 === userId ? selectedChat.user2 : selectedChat.user1;
+
+    socket.emit("sendMessage", {
+      chatId: selectedChat._id,
       senderId: userId,
-      receiverId: selectedUserId,
+      receiverId,
+      username: formData.username,
       type: "text",
       message,
     });
 
-    setMessage("");
+    dispatch(setMessage(""));
   };
 
   const onMessageHandler = (e) => {
-    setMessage(e.target.value);
+    dispatch(setMessage(e.target.value));
+
+    if (!selectedChat) return;
 
     socket.emit("typing", {
+      chatId: selectedChat._id,
       senderId: userId,
-      receiverId: selectedUserId,
+      username: formData.username,
     });
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+    clearTimeout(typingTimeoutRef.current);
 
     typingTimeoutRef.current = setTimeout(() => {
       socket.emit("stopTyping", {
+        chatId: selectedChat._id,
         senderId: userId,
-        receiverId: selectedUserId,
+        username: formData.username,
       });
     }, 800);
   };
 
-  const onFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setSelectedFile(file);
-  };
+  const sendFileMessage = async (file) => {
+    if (!file || !selectedChat) return;
 
-  const sendFileMessage = async () => {
-    if (!selectedFile) return;
-
-    setUploading(true);
+    dispatch(setUploading(true));
 
     const data = new FormData();
-    data.append("file", selectedFile);
+    data.append("file", file);
 
     try {
       const res = await axiosApi.post("/chatUploads", data);
 
-      socket.emit("sendPrivateMessage", {
-        senderId: userId,
-        receiverId: selectedUserId,
-        type: selectedFile.type.startsWith("image") ? "image" : "file",
-        fileUrl: res.data.fileUrl,
-        fileName: res.data.fileName,
-        fileSize: res.data.fileSize,
-      });
+      const receiverId =
+        selectedChat.user1 === userId ? selectedChat.user2 : selectedChat.user1;
 
-      setSelectedFile(null);
+      socket.emit("sendMessage", {
+        chatId: selectedChat._id,
+        senderId: userId,
+        receiverId,
+        username: formData.username,
+        type: file.type.startsWith("image") ? "image" : "file",
+        ...res.data,
+      });
     } catch (err) {
-      console.error("Upload failed", err);
+      console.error(err);
     } finally {
-      setUploading(false);
+      dispatch(setUploading(false));
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="w-full max-w-md bg-white shadow-lg rounded-xl p-5">
+    <div className="h-screen w-screen bg-gray-100 flex items-center justify-center">
+      <div className="bg-white shadow-lg rounded-xl w-full h-full max-w-7xl flex flex-col">
         <Toaster />
-        <h2 className="text-xl font-semibold text-center mb-4">
+
+        <h2 className="text-xl font-semibold text-center py-3 border-b">
           Real Chat App
         </h2>
 
         {!joined ? (
-          <Login
-            joinChat={joinChat}
-            username={username}
-            setUsername={setUsername}
-            formData={formData}
-            setFormData={setFormData}
-          />
+          <div className="flex-1 flex items-center justify-center">
+            <Login
+              joinChat={joinChat}
+              formData={formData}
+              setFormData={(data) => dispatch(setFormData(data))}
+            />
+          </div>
         ) : (
-          <Landing
-            username={username}
-            messages={messages}
-            message={message}
-            onMessageHandler={onMessageHandler}
-            sendMessage={sendMessage}
-            typingUserID={typingUserID}
-            onFileChange={onFileChange}
-            sendFileMessage={sendFileMessage}
-            selectedFile={selectedFile}
-            uploading={uploading}
-          />
+          <div className="flex flex-1 overflow-hidden">
+            <UserList />
+
+            <div className="flex-1 flex flex-col">
+              {selectedChat ? (
+                <Landing
+                  onMessageHandler={onMessageHandler}
+                  sendMessage={sendMessage}
+                  sendFileMessage={sendFileMessage}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-gray-400">
+                  Select a user to start chat
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

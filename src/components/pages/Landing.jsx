@@ -1,31 +1,38 @@
-function Landing({
-  username,
-  messages,
-  message,
-  onMessageHandler,
-  sendMessage,
-  typingUserID,
-  onFileChange,
-  sendFileMessage,
-  selectedFile,
-  uploading,
-  userId,
-}) {
-  console.log({ message: message.senderId });
-  console.log({ userId });
+import { useSelector } from "react-redux";
+import { useState, useEffect, useRef } from "react";
+
+function Landing({ onMessageHandler, sendMessage, sendFileMessage }) {
+  const { username, userId } = useSelector((state) => state.auth);
+  const { messages, message, typingUserID, uploading, selectedChat } =
+    useSelector((state) => state.chat);
+
+  const [selectedFile, setSelectedFile] = useState(null);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
-    <div>
-      <p className="text-sm text-gray-600 mb-2">
-        Logged in as <b>{username}</b>
-      </p>
+    <div className="flex flex-col h-full">
+      <div className="border-b px-4 py-2 bg-white flex items-center justify-between">
+        <div className="flex flex-col">
+          <p className="font-semibold text-gray-800 text-sm">
+            {selectedChat?.username || "Chat"}
+          </p>
 
-      {typingUserID && (
-        <p className="text-sm text-gray-600 mb-2">
-          <b className="capitalize">{typingUserID}</b> is typing...
-        </p>
-      )}
+          {typingUserID ? (
+            <p className="text-xs text-green-500 flex items-center gap-1">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <b className="capitalize">{typingUserID}</b> is typing...
+            </p>
+          ) : (
+            <p className="text-xs text-gray-400">Online</p>
+          )}
+        </div>
+      </div>
 
-      <div className="h-64 overflow-y-auto border rounded-lg p-2 mb-3 bg-gray-50">
+      <div className="flex-1 overflow-y-auto bg-gray-50 p-3 space-y-2">
         {messages.map((msg, index) => (
           <div
             key={index}
@@ -33,69 +40,70 @@ function Landing({
               msg.senderId === userId ? "justify-end" : "justify-start"
             }`}
           >
-            <span className="font-semibold">{msg.username}:</span>
-
-            {(!msg.type || msg.type === "text") && (
-              <span className="ml-1">{msg.message}</span>
-            )}
-
-            {msg.type === "image" && (
-              <img
-                src={msg.fileUrl}
-                alt="uploaded"
-                className="mt-1 max-w-full rounded-lg h-24"
-              />
-            )}
-
-            {msg.type === "file" && (
-              <a
-                href={msg.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-1 text-blue-600 underline h-1/2"
-              >
-                {msg.fileName}
-              </a>
-            )}
+            <div
+              className={`max-w-[70%] px-2 py-2 rounded-2xl shadow text-sm
+  ${
+    msg.senderId === userId
+      ? "bg-blue-500 text-white rounded-br-none"
+      : "bg-white text-gray-800 rounded-bl-none"
+  }`}
+            >
+              {!msg.type || msg.type === "text" ? (
+                <p>{msg.message}</p>
+              ) : msg.type === "image" ? (
+                <img src={msg.fileUrl} className="h-32 rounded" />
+              ) : (
+                <a
+                  href={msg.fileUrl}
+                  target="_blank"
+                  className="text-blue-600 underline"
+                >
+                  {msg.fileName}
+                </a>
+              )}
+            </div>
           </div>
         ))}
+        <div ref={bottomRef} />
       </div>
 
-      <div className="flex gap-2">
-        <input
-          className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
-          placeholder="Type message..."
-          value={message}
-          onChange={onMessageHandler}
-          disabled={uploading}
-        />
+      <div className="border-t p-3 bg-white">
+        <div className="flex gap-2">
+          <input
+            className="flex-1 border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="Type message..."
+            value={message}
+            onChange={onMessageHandler}
+            disabled={uploading}
+          />
 
-        <button
-          onClick={sendMessage}
-          disabled={uploading}
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
-        >
-          Send
-        </button>
+          <button
+            onClick={sendMessage}
+            disabled={uploading}
+            className="bg-blue-500 text-white px-5 py-2 rounded-full"
+          >
+            Send
+          </button>
+        </div>
+
+        <div className="mt-2 flex gap-2 items-center justify-between">
+          <input
+            type="file"
+            onChange={(e) => setSelectedFile(e.target.files[0])}
+          />
+
+          <button
+            onClick={() => {
+              sendFileMessage(selectedFile);
+              setSelectedFile(null);
+            }}
+            disabled={!selectedFile || uploading}
+            className="bg-green-500 text-white px-4 py-1.5 rounded-full"
+          >
+            {uploading ? "Uploading..." : "Send File"}
+          </button>
+        </div>
       </div>
-
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <input type="file" onChange={onFileChange} />
-
-        <button
-          onClick={sendFileMessage}
-          disabled={!selectedFile || uploading}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
-        >
-          {uploading ? "Uploading..." : "Send File"}
-        </button>
-      </div>
-
-      {selectedFile && (
-        <p className="text-xs text-gray-500 mt-1">
-          Selected: {selectedFile.name}
-        </p>
-      )}
     </div>
   );
 }

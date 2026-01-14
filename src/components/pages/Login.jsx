@@ -1,17 +1,25 @@
-function Login({ joinChat, username, setUsername, setFormData, formData }) {
+import { useDispatch, useSelector } from "react-redux";
+import { setFormData } from "../../slices/authSlice";
+
+function Login({ joinChat }) {
+  const dispatch = useDispatch();
+
+  const { formData } = useSelector((state) => state.auth);
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 w-full max-w-md">
       <input
         type="text"
         className="w-full border border-gray-300 rounded-lg px-4 py-2
                    focus:outline-none focus:ring-2 focus:ring-blue-500"
         placeholder="Enter username"
-        value={username}
+        value={formData.username}
         onChange={(e) => {
-          setFormData((prev) => {
-            return { ...prev, username: e.target.value };
-          });
-          setUsername(e.target.value);
+          dispatch(
+            setFormData({
+              username: e.target.value,
+            })
+          );
         }}
       />
 
@@ -22,9 +30,11 @@ function Login({ joinChat, username, setUsername, setFormData, formData }) {
         placeholder="Enter password"
         value={formData.password}
         onChange={(e) =>
-          setFormData((prev) => {
-            return { ...prev, password: e.target.value };
-          })
+          dispatch(
+            setFormData({
+              password: e.target.value,
+            })
+          )
         }
       />
 
