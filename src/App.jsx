@@ -6,7 +6,7 @@ import Landing from "./components/pages/Landing";
 import axiosApi from "./config/axios";
 import toast, { Toaster } from "react-hot-toast";
 
-import { setFormData, setUser } from "./slices/authSlice";
+import { setUser } from "./slices/authSlice";
 
 import {
   addMessage,
@@ -24,11 +24,39 @@ function App() {
   const typingTimeoutRef = useRef(null);
 
   const { userId, joined, formData } = useSelector((state) => state.auth);
-  const { selectedUser, selectedChat, message } = useSelector(
-    (state) => state.chat
-  );
+  const { selectedChat, message } = useSelector((state) => state.chat);
 
   const [isSignup, setIsSignup] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userDetails = localStorage.getItem("user_details");
+
+    if (!token || !userDetails) return;
+
+    const parsedUser = JSON.parse(userDetails);
+
+    dispatch(setUser(parsedUser));
+
+    socket.auth = { token };
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    socket.once("connect", () => {
+      socket.emit("setUser", parsedUser);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.log("Socket error:", err.message);
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("connect_error");
+    };
+  }, [dispatch]);
 
   useEffect(() => {
     if (!selectedChat) return;
@@ -58,14 +86,11 @@ function App() {
   }, [dispatch]);
 
   useEffect(() => {
-    socket.on(
-      "receiveTypingState",
-      ({ senderId, chatId, isTyping, username }) => {
-        if (selectedChat && chatId === selectedChat._id) {
-          dispatch(setTypingUserID(isTyping ? username : ""));
-        }
+    socket.on("receiveTypingState", ({ chatId, isTyping, username }) => {
+      if (selectedChat && chatId === selectedChat._id) {
+        dispatch(setTypingUserID(isTyping ? username : ""));
       }
-    );
+    });
 
     return () => {
       socket.off("receiveTypingState");
@@ -108,7 +133,7 @@ function App() {
     }
   };
 
-  const sendMessage = () => {
+  const sendMessage = (e) => {
     if (!message.trim() || !selectedChat) return;
 
     const receiverId =

@@ -15,11 +15,7 @@ function UserList() {
     (state) => state.chat
   );
 
-  console.log({ chatList });
-
   const { userId } = useSelector((state) => state.auth);
-
-  console.log({ chatList });
 
   const [search, setSearch] = useState("");
 

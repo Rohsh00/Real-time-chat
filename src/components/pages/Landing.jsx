@@ -2,7 +2,7 @@ import { useSelector } from "react-redux";
 import { useState, useEffect, useRef } from "react";
 
 function Landing({ onMessageHandler, sendMessage, sendFileMessage }) {
-  const { username, userId } = useSelector((state) => state.auth);
+  const { userId } = useSelector((state) => state.auth);
   const { messages, message, typingUserID, uploading, selectedChat } =
     useSelector((state) => state.chat);
 
@@ -13,12 +13,18 @@ function Landing({ onMessageHandler, sendMessage, sendFileMessage }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const selectedChatUsername =
+    userId === selectedChat.user1._id
+      ? selectedChat.user2.username
+      : selectedChat.user1.username;
+
+  console.log({ selectedChat });
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b px-4 py-2 bg-white flex items-center justify-between">
-        <div className="flex flex-col">
-          <p className="font-semibold text-gray-800 text-sm">
-            {selectedChat?.username || "Chat"}
+      <div className="border-b px-4 py-2 bg-white flex items-center justify-between flex">
+        <div className="flex items-center gap-1">
+          <p className="font-semibold text-gray-800 text-sm capitalize">
+            {selectedChatUsername || "Chat"}
           </p>
 
           {typingUserID ? (
@@ -27,7 +33,9 @@ function Landing({ onMessageHandler, sendMessage, sendFileMessage }) {
               <b className="capitalize">{typingUserID}</b> is typing...
             </p>
           ) : (
-            <p className="text-xs text-gray-400">Online</p>
+            <p className="text-xs text-gray-400 rounded-full animate-pulse">
+              🔴
+            </p>
           )}
         </div>
       </div>
@@ -75,6 +83,12 @@ function Landing({ onMessageHandler, sendMessage, sendFileMessage }) {
             value={message}
             onChange={onMessageHandler}
             disabled={uploading}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
           />
 
           <button

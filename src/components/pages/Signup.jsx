@@ -8,7 +8,6 @@ function Signup({ switchToLogin }) {
   const { formData } = useSelector((state) => state.auth);
 
   const handleSignup = async () => {
-    console.log({ formData });
     if (!formData.username?.trim() || !formData.password?.trim()) {
       toast.error("Username and password are required");
       return;
