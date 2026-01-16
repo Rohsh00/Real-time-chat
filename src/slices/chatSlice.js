@@ -5,6 +5,7 @@ const initialState = {
   chatList: [],
   searchedUsers: [],
   selectedChat: null,
+  onlineUsersList: [],
 
   messages: [],
   message: "",
@@ -58,8 +59,6 @@ export const fetchChatList = createAsyncThunk(
   }
 );
 
-/* ===================== SLICE ===================== */
-
 const chatSlice = createSlice({
   name: "chat",
   initialState,
@@ -69,7 +68,12 @@ const chatSlice = createSlice({
       state.selectedChat = action.payload;
       state.messages = [];
     },
-
+    setChatList(state, action) {
+      state.chatList = action.payload;
+    },
+    setOnlineUsersList(state, action) {
+      state.onlineUsersList = action.payload || [];
+    },
     addMessage(state, action) {
       state.messages.push(action.payload);
     },
@@ -93,7 +97,6 @@ const chatSlice = createSlice({
 
   extraReducers: (builder) => {
     builder
-      /* Search users */
       .addCase(searchUsers.pending, (state) => {
         state.searchLoading = true;
       })
@@ -106,13 +109,11 @@ const chatSlice = createSlice({
         state.error = action.payload;
       })
 
-      /* Start chat */
       .addCase(startChat.fulfilled, (state, action) => {
         state.selectedChat = action.payload;
         state.messages = [];
       })
 
-      /* Fetch chat list */
       .addCase(fetchChatList.pending, (state) => {
         state.chatListLoading = true;
       })
@@ -128,7 +129,9 @@ const chatSlice = createSlice({
 });
 
 export const {
+  setChatList,
   setSelectedChat,
+  setOnlineUsersList,
   addMessage,
   setMessages,
   setMessage,

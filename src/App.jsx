@@ -14,6 +14,8 @@ import {
   setMessage,
   setTypingUserID,
   setUploading,
+  setChatList,
+  setOnlineUsersList,
 } from "./slices/chatSlice";
 
 import UserList from "./components/pages/usersList";
@@ -24,7 +26,9 @@ function App() {
   const typingTimeoutRef = useRef(null);
 
   const { userId, joined, formData } = useSelector((state) => state.auth);
-  const { selectedChat, message } = useSelector((state) => state.chat);
+  const { selectedChat, chatList, message } = useSelector(
+    (state) => state.chat
+  );
 
   const [isSignup, setIsSignup] = useState(false);
 
@@ -56,6 +60,14 @@ function App() {
       socket.off("connect");
       socket.off("connect_error");
     };
+  }, [dispatch]);
+
+  useEffect(() => {
+    socket.on("online-users", (users) => {
+      dispatch(setOnlineUsersList(users));
+    });
+
+    return () => socket.off("online-users");
   }, [dispatch]);
 
   useEffect(() => {
@@ -133,7 +145,7 @@ function App() {
     }
   };
 
-  const sendMessage = (e) => {
+  const sendMessage = () => {
     if (!message.trim() || !selectedChat) return;
 
     const receiverId =
@@ -148,7 +160,15 @@ function App() {
       message,
     });
 
+    const updatedChatList = chatList.map((item) => {
+      if (item._id === selectedChat._id) {
+        return { ...item, lastMessage: message };
+      }
+      return item;
+    });
+
     dispatch(setMessage(""));
+    dispatch(setChatList([...updatedChatList]));
   };
 
   const onMessageHandler = (e) => {

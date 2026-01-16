@@ -3,8 +3,14 @@ import { useState, useEffect, useRef } from "react";
 
 function Landing({ onMessageHandler, sendMessage, sendFileMessage }) {
   const { userId } = useSelector((state) => state.auth);
-  const { messages, message, typingUserID, uploading, selectedChat } =
-    useSelector((state) => state.chat);
+  const {
+    messages,
+    message,
+    typingUserID,
+    uploading,
+    selectedChat,
+    onlineUsersList,
+  } = useSelector((state) => state.chat);
 
   const [selectedFile, setSelectedFile] = useState(null);
   const bottomRef = useRef(null);
@@ -18,25 +24,33 @@ function Landing({ onMessageHandler, sendMessage, sendFileMessage }) {
       ? selectedChat.user2.username
       : selectedChat.user1.username;
 
-  console.log({ selectedChat });
+  const isOnline = onlineUsersList.includes(selectedChat.user2._id);
+
   return (
     <div className="flex flex-col h-full">
       <div className="border-b px-4 py-2 bg-white flex items-center justify-between flex">
-        <div className="flex items-center gap-1">
-          <p className="font-semibold text-gray-800 text-sm capitalize">
-            {selectedChatUsername || "Chat"}
-          </p>
+        <div className="flex items-center justify-between px-4 py-3 bg-white">
+          <div className="flex flex-col">
+            <p className="font-semibold text-gray-800 text-sm capitalize">
+              {selectedChatUsername || "Chat"}
+            </p>
 
-          {typingUserID ? (
-            <p className="text-xs text-green-500 flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              <b className="capitalize">{typingUserID}</b> is typing...
-            </p>
-          ) : (
-            <p className="text-xs text-gray-400 rounded-full animate-pulse">
-              🔴
-            </p>
-          )}
+            {typingUserID ? (
+              <div className="flex items-center gap-2 text-xs text-green-500">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="capitalize font-medium">typing...</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                  }`}
+                />
+                <span>{isOnline ? "Active now" : "Offline"}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
