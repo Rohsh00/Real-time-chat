@@ -20,6 +20,7 @@ import {
 
 import UserList from "./components/pages/usersList";
 import Signup from "./components/pages/Signup";
+import { subscribeForPush } from "./utils/helper";
 
 function App() {
   const dispatch = useDispatch();
@@ -61,6 +62,12 @@ function App() {
       socket.off("connect_error");
     };
   }, [dispatch]);
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js");
+    }
+  }, []);
 
   useEffect(() => {
     socket.on("online-users", (users) => {
@@ -140,6 +147,8 @@ function App() {
       });
 
       toast.success("Login successful", { id: loadingToast });
+
+      subscribeForPush(user.userId);
     } catch (err) {
       toast.error("Login failed", { id: loadingToast });
     }

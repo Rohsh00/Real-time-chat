@@ -7,7 +7,9 @@ function Signup({ switchToLogin }) {
   const dispatch = useDispatch();
   const { formData } = useSelector((state) => state.auth);
 
-  const handleSignup = async () => {
+  const handleSignup = async (e) => {
+    e.preventDefault();
+
     if (!formData.username?.trim() || !formData.password?.trim()) {
       toast.error("Username and password are required");
       return;
@@ -27,7 +29,10 @@ function Signup({ switchToLogin }) {
   };
 
   return (
-    <div className="flex flex-col gap-3 w-full max-w-md">
+    <form
+      onSubmit={handleSignup}
+      className="flex flex-col gap-3 w-full max-w-md"
+    >
       <input
         type="text"
         placeholder="Enter username"
@@ -47,7 +52,7 @@ function Signup({ switchToLogin }) {
       />
 
       <button
-        onClick={handleSignup}
+        type="submit"
         className="w-full bg-green-500 hover:bg-green-600
                    text-white font-semibold py-2 rounded-lg
                    transition duration-200"
@@ -61,7 +66,7 @@ function Signup({ switchToLogin }) {
       >
         Already have an account? Login
       </p>
-    </div>
+    </form>
   );
 }
 

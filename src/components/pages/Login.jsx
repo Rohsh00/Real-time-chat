@@ -3,24 +3,31 @@ import { setFormData } from "../../slices/authSlice";
 
 function Login({ joinChat }) {
   const dispatch = useDispatch();
-
   const { formData } = useSelector((state) => state.auth);
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    joinChat();
+  };
+
   return (
-    <div className="flex flex-col gap-3 w-full max-w-md">
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-3 w-full max-w-md"
+    >
       <input
         type="text"
         className="w-full border border-gray-300 rounded-lg px-4 py-2
                    focus:outline-none focus:ring-2 focus:ring-blue-500"
         placeholder="Enter username"
         value={formData.username}
-        onChange={(e) => {
+        onChange={(e) =>
           dispatch(
             setFormData({
               username: e.target.value,
             })
-          );
-        }}
+          )
+        }
       />
 
       <input
@@ -39,14 +46,14 @@ function Login({ joinChat }) {
       />
 
       <button
-        onClick={joinChat}
+        type="submit"
         className="w-full bg-blue-500 hover:bg-blue-600
                    text-white font-semibold py-2 rounded-lg
                    transition duration-200"
       >
         Join Chat
       </button>
-    </div>
+    </form>
   );
 }
 
