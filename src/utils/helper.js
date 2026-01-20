@@ -1,7 +1,6 @@
 import axiosApi from "../config/axios";
 
 export const subscribeForPush = async (userId) => {
-  console.log({ userId });
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return;
 
