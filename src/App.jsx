@@ -21,7 +21,7 @@ import {
 import UserList from "./components/pages/usersList";
 import Signup from "./components/pages/Signup";
 import { subscribeForPush } from "./utils/helper";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useParams } from "react-router-dom";
 
 function App() {
   const dispatch = useDispatch();
@@ -33,6 +33,7 @@ function App() {
   );
 
   const [isSignup, setIsSignup] = useState(false);
+  const { chatid } = useParams();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -261,6 +262,7 @@ function App() {
         ) : (
           <div className="flex flex-1 overflow-hidden">
             <Routes>
+              <Route path="/" element={<UserList />} />
               <Route path="/chat/:chatid" element={<UserList />} />
             </Routes>
             <div className="flex-1 flex flex-col">
