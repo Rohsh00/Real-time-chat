@@ -6,7 +6,7 @@ import {
   setSelectedChat,
 } from "../../slices/chatSlice";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 function UserList() {
   const dispatch = useDispatch();
@@ -15,6 +15,9 @@ function UserList() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const URLChatID = searchParams.get("chatid");
+
+  const { chatid } = useParams();
+  console.log("Chat ID:", chatid);
 
   const { chatList, searchedUsers, selectedChat, searchLoading } = useSelector(
     (state) => state.chat,
@@ -29,13 +32,13 @@ function UserList() {
   }, [dispatch]);
 
   useEffect(() => {
-    if (!URLChatID || chatList.length === 0) return;
+    if (!chatid || chatList.length === 0) return;
 
-    const urlChat = chatList.find((chat) => chat._id === URLChatID);
-    if (urlChat) {
+    const urlChat = chatList.find((chat) => chat._id === chatid);
+    if (urlChat && selectedChat?._id !== urlChat._id) {
       dispatch(setSelectedChat(urlChat));
     }
-  }, [URLChatID, chatList, dispatch]);
+  }, [chatid, chatList, dispatch, selectedChat]);
 
   const userSearchHandler = (e) => {
     const value = e.target.value;
@@ -53,7 +56,7 @@ function UserList() {
   const handleChatClick = (chat) => {
     console.log({ chat });
     dispatch(setSelectedChat(chat));
-    navigate(`/chat?chatid=${chat._id}`);
+    navigate(`/chat/${chat._id}`);
   };
 
   return (

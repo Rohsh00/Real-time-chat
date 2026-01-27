@@ -21,6 +21,7 @@ import {
 import UserList from "./components/pages/usersList";
 import Signup from "./components/pages/Signup";
 import { subscribeForPush } from "./utils/helper";
+import { Route, Routes } from "react-router-dom";
 
 function App() {
   const dispatch = useDispatch();
@@ -28,7 +29,7 @@ function App() {
 
   const { userId, joined, formData } = useSelector((state) => state.auth);
   const { selectedChat, chatList, message } = useSelector(
-    (state) => state.chat
+    (state) => state.chat,
   );
 
   const [isSignup, setIsSignup] = useState(false);
@@ -259,8 +260,9 @@ function App() {
           </div>
         ) : (
           <div className="flex flex-1 overflow-hidden">
-            <UserList />
-
+            <Routes>
+              <Route path="/chat/:chatid" element={<UserList />} />
+            </Routes>
             <div className="flex-1 flex flex-col">
               {selectedChat ? (
                 <Landing
