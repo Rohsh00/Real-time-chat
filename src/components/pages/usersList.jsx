@@ -6,13 +6,18 @@ import {
   setSelectedChat,
 } from "../../slices/chatSlice";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 function UserList() {
   const dispatch = useDispatch();
   const debounceRef = useRef(null);
 
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const URLChatID = searchParams.get("chatid");
+
   const { chatList, searchedUsers, selectedChat, searchLoading } = useSelector(
-    (state) => state.chat
+    (state) => state.chat,
   );
 
   const { userId } = useSelector((state) => state.auth);
@@ -22,6 +27,15 @@ function UserList() {
   useEffect(() => {
     dispatch(fetchChatList());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!URLChatID || chatList.length === 0) return;
+
+    const urlChat = chatList.find((chat) => chat._id === URLChatID);
+    if (urlChat) {
+      dispatch(setSelectedChat(urlChat));
+    }
+  }, [URLChatID, chatList, dispatch]);
 
   const userSearchHandler = (e) => {
     const value = e.target.value;
@@ -34,6 +48,12 @@ function UserList() {
         dispatch(searchUsers(value));
       }
     }, 500);
+  };
+
+  const handleChatClick = (chat) => {
+    console.log({ chat });
+    dispatch(setSelectedChat(chat));
+    navigate(`/chat?chatid=${chat._id}`);
   };
 
   return (
@@ -60,7 +80,7 @@ function UserList() {
                   key={user._id}
                   onClick={() => {
                     dispatch(startChat(user._id)).then(() =>
-                      dispatch(fetchChatList())
+                      dispatch(fetchChatList()),
                     );
                     setSearch("");
                   }}
@@ -88,7 +108,7 @@ function UserList() {
           return (
             <div
               key={chat._id}
-              onClick={() => dispatch(setSelectedChat(chat))}
+              onClick={() => handleChatClick(chat)}
               className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer
                 ${isSelected ? "bg-blue-100" : "hover:bg-gray-100"}`}
             >
