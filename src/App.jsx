@@ -16,6 +16,7 @@ import {
   setUploading,
   setChatList,
   setOnlineUsersList,
+  updateMessageStatus,
 } from "./slices/chatSlice";
 
 import UserList from "./components/pages/usersList";
@@ -47,21 +48,14 @@ function App() {
 
     socket.auth = { token };
 
-    if (!socket.connected) {
-      socket.connect();
-    }
+    if (!socket.connected) socket.connect();
 
     socket.once("connect", () => {
       socket.emit("setUser", parsedUser);
     });
 
-    socket.on("connect_error", (err) => {
-      console.log("Socket error:", err.message);
-    });
-
     return () => {
       socket.off("connect");
-      socket.off("connect_error");
     };
   }, [dispatch]);
 
@@ -83,27 +77,38 @@ function App() {
     if (!selectedChat) return;
 
     const loadChat = async () => {
-      try {
-        const res = await axiosApi.get(`/messages/history/${selectedChat._id}`);
-        dispatch(setMessages(res.data));
-      } catch (err) {
-        console.error("Load chat failed", err);
-      }
+      const res = await axiosApi.get(`/messages/history/${selectedChat._id}`);
+      dispatch(setMessages(res.data));
     };
 
     loadChat();
 
-    socket.emit("joinRoom", {
-      chatId: selectedChat._id,
-    });
-  }, [selectedChat, dispatch]);
+    socket.emit("joinRoom", { chatId: selectedChat._id });
+    socket.emit("messageSeen", { chatId: selectedChat._id, userId });
+  }, [selectedChat, dispatch, userId]);
 
   useEffect(() => {
     socket.on("receiveMessage", (data) => {
+      socket.emit("messageDelivered", { messageId: data._id });
       dispatch(addMessage(data));
     });
 
     return () => socket.off("receiveMessage");
+  }, [dispatch]);
+
+  useEffect(() => {
+    socket.on("messageStatusUpdate", (msg) => {
+      dispatch(updateMessageStatus(msg));
+    });
+
+    socket.on("bulkSeenUpdate", (msgs) => {
+      dispatch(setMessages(msgs));
+    });
+
+    return () => {
+      socket.off("messageStatusUpdate");
+      socket.off("bulkSeenUpdate");
+    };
   }, [dispatch]);
 
   useEffect(() => {
@@ -113,17 +118,10 @@ function App() {
       }
     });
 
-    return () => {
-      socket.off("receiveTypingState");
-    };
+    return () => socket.off("receiveTypingState");
   }, [dispatch, selectedChat]);
 
   const joinChat = async () => {
-    if (!formData.username || !formData.password) {
-      toast.error("Username and password required");
-      return;
-    }
-
     const loadingToast = toast.loading("Logging in...");
 
     try {
@@ -151,7 +149,7 @@ function App() {
       toast.success("Login successful", { id: loadingToast });
 
       subscribeForPush(user.userId);
-    } catch (err) {
+    } catch {
       toast.error("Login failed", { id: loadingToast });
     }
   };
@@ -171,15 +169,12 @@ function App() {
       message,
     });
 
-    const updatedChatList = chatList.map((item) => {
-      if (item._id === selectedChat._id) {
-        return { ...item, lastMessage: message };
-      }
-      return item;
-    });
+    const updatedChatList = chatList.map((item) =>
+      item._id === selectedChat._id ? { ...item, lastMessage: message } : item,
+    );
 
     dispatch(setMessage(""));
-    dispatch(setChatList([...updatedChatList]));
+    dispatch(setChatList(updatedChatList));
   };
 
   const onMessageHandler = (e) => {
@@ -226,8 +221,6 @@ function App() {
         type: file.type.startsWith("image") ? "image" : "file",
         ...res.data,
       });
-    } catch (err) {
-      console.error(err);
     } finally {
       dispatch(setUploading(false));
     }
@@ -249,7 +242,6 @@ function App() {
             ) : (
               <div className="flex flex-col gap-4">
                 <Login joinChat={joinChat} />
-
                 <p
                   className="text-sm text-blue-600 text-center cursor-pointer"
                   onClick={() => setIsSignup(true)}
@@ -265,6 +257,7 @@ function App() {
               <Route path="/" element={<UserList />} />
               <Route path="/chat/:chatid" element={<UserList />} />
             </Routes>
+
             <div className="flex-1 flex flex-col">
               {selectedChat ? (
                 <Landing

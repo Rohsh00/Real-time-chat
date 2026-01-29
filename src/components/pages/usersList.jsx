@@ -6,18 +6,15 @@ import {
   setSelectedChat,
 } from "../../slices/chatSlice";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 function UserList() {
   const dispatch = useDispatch();
   const debounceRef = useRef(null);
 
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const URLChatID = searchParams.get("chatid");
 
   const { chatid } = useParams();
-  console.log("Chat ID:", chatid);
 
   const { chatList, searchedUsers, selectedChat, searchLoading } = useSelector(
     (state) => state.chat,
@@ -54,7 +51,6 @@ function UserList() {
   };
 
   const handleChatClick = (chat) => {
-    console.log({ chat });
     dispatch(setSelectedChat(chat));
     navigate(`/chat/${chat._id}`);
   };

@@ -1,5 +1,6 @@
 import { useSelector } from "react-redux";
 import { useState, useEffect, useRef } from "react";
+import moment from "moment";
 
 function Landing({ onMessageHandler, sendMessage, sendFileMessage }) {
   const { userId } = useSelector((state) => state.auth);
@@ -25,6 +26,13 @@ function Landing({ onMessageHandler, sendMessage, sendFileMessage }) {
       : selectedChat.user1.username;
 
   const isOnline = onlineUsersList.includes(selectedChat.user2._id);
+
+  const getStatusIcon = (msg) => {
+    if (!msg.status || msg.status === "sent") return "✓";
+    if (msg.status === "delivered") return "✓✓";
+    if (msg.status === "seen")
+      return <span className="text-white-800 font-bold">✓✓</span>;
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -55,37 +63,67 @@ function Landing({ onMessageHandler, sendMessage, sendFileMessage }) {
       </div>
 
       <div className="flex-1 overflow-y-auto bg-gray-50 p-3 space-y-2">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`mb-2 flex ${
-              msg.senderId === userId ? "justify-end" : "justify-start"
-            }`}
-          >
+        {messages.map((msg, index) => {
+          const time = moment(msg.createdAt);
+          const displayTime = time.isSame(moment(), "day")
+            ? time.format("hh:mm A")
+            : time.isSame(moment().subtract(1, "day"), "day")
+              ? "Yesterday"
+              : time.format("DD MMM");
+
+          const isMe = msg.senderId === userId;
+
+          return (
             <div
-              className={`max-w-[70%] px-2 py-2 rounded-2xl shadow text-sm
-  ${
-    msg.senderId === userId
-      ? "bg-blue-500 text-white rounded-br-none"
-      : "bg-white text-gray-800 rounded-bl-none"
-  }`}
+              key={index}
+              className={`mb-2 flex ${isMe ? "justify-end" : "justify-start"}`}
             >
-              {!msg.type || msg.type === "text" ? (
-                <p>{msg.message}</p>
-              ) : msg.type === "image" ? (
-                <img src={msg.fileUrl} className="h-32 rounded" />
-              ) : (
-                <a
-                  href={msg.fileUrl}
-                  target="_blank"
-                  className="text-blue-600 underline"
+              <div className="relative flex items-center group">
+                {isMe && (
+                  <span className="absolute right-[0px] mr-2 text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap">
+                    {displayTime}
+                  </span>
+                )}
+
+                <div
+                  className={`px-3 py-2 rounded-2xl shadow text-sm transition-transform duration-200 flex flex-row items-center gap-4
+                    ${
+                      isMe
+                        ? "bg-blue-500 text-white rounded-br-none group-hover:-translate-x-15"
+                        : "bg-white text-gray-800 rounded-bl-none group-hover:translate-x-15"
+                    }`}
                 >
-                  {msg.fileName}
-                </a>
-              )}
+                  {!msg.type || msg.type === "text" ? (
+                    <p>{msg.message}</p>
+                  ) : msg.type === "image" ? (
+                    <img src={msg.fileUrl} className="h-32 rounded" />
+                  ) : (
+                    <a
+                      href={msg.fileUrl}
+                      target="_blank"
+                      className="text-blue-600 underline"
+                    >
+                      {msg.fileName}
+                    </a>
+                  )}
+
+                  {isMe && (
+                    <span className="text-[10px] text-right opacity-70">
+                      {getStatusIcon(msg)}
+                    </span>
+                  )}
+                </div>
+
+                {!isMe && (
+                  <span className="absolute mr-2 text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap">
+                    {displayTime}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
+
         <div ref={bottomRef} />
       </div>
 

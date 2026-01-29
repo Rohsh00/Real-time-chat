@@ -30,7 +30,7 @@ export const searchUsers = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data || "Search failed");
     }
-  }
+  },
 );
 
 export const startChat = createAsyncThunk(
@@ -44,7 +44,7 @@ export const startChat = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data || "Start chat failed");
     }
-  }
+  },
 );
 
 export const fetchChatList = createAsyncThunk(
@@ -56,7 +56,7 @@ export const fetchChatList = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data || "Fetch chats failed");
     }
-  }
+  },
 );
 
 const chatSlice = createSlice({
@@ -92,6 +92,12 @@ const chatSlice = createSlice({
 
     setUploading(state, action) {
       state.uploading = action.payload;
+    },
+    updateMessageStatus: (state, action) => {
+      const index = state.messages.findIndex(
+        (m) => m._id === action.payload._id,
+      );
+      if (index !== -1) state.messages[index] = action.payload;
     },
   },
 
@@ -137,6 +143,7 @@ export const {
   setMessage,
   setTypingUserID,
   setUploading,
+  updateMessageStatus,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;
